@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0078D4" />
+      <stop offset="50%" stop-color="#00B4D8" />
+      <stop offset="100%" stop-color="#00C853" />
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFB300" />
+      <stop offset="100%" stop-color="#FF6D00" />
+    </linearGradient>
+    <style>
+      .brand { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; fill: #0b0b0b; }
+      .tag { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 14px; fill: #666666; }
+    </style>
+  </defs>
+
+  <!-- background panel -->
+  <rect x="0" y="0" width="800" height="200" rx="12" fill="#ffffff" stroke="#e6e6e6" />
+
+  <!-- stylized multi-camera motif: overlapping rounded squares -->
+  <g transform="translate(40,26)">
+    <rect x="0" y="0" width="120" height="80" rx="10" fill="url(#g1)" opacity="0.95" />
+    <rect x="48" y="8" width="120" height="80" rx="10" fill="url(#g2)" opacity="0.92" transform="rotate(-6 108 48)" />
+    <rect x="96" y="16" width="120" height="80" rx="10" fill="#6A1B9A" opacity="0.9" transform="rotate(-12 156 56)" />
+
+    <!-- lens circles to suggest camera -->
+    <g transform="translate(18,12)">
+      <circle cx="36" cy="36" r="12" fill="#fff" opacity="0.9" />
+      <circle cx="84" cy="44" r="10" fill="#fff" opacity="0.85" />
+      <circle cx="132" cy="52" r="8" fill="#fff" opacity="0.8" />
+    </g>
+
+    <!-- stitch line / path connecting frames -->
+    <path d="M12 100 C 80 80, 160 120, 228 98" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round" stroke-dasharray="8 6" />
+    <circle cx="12" cy="100" r="5" fill="#0078D4" />
+    <circle cx="228" cy="98" r="5" fill="#FF6D00" />
+  </g>
+
+  <!-- text -->
+  <g transform="translate(220,64)">
+    <text x="0" y="22" class="brand" font-size="34">blink-multicamera-stitch</text>
+    <text x="0" y="48" class="tag">frame extraction • dedupe • clustering • stitching</text>
+  </g>
+
+</svg>

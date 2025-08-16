@@ -1,0 +1,15 @@
+faster_whisper
+humanize
+inaspeechsegmenter
+librosa
+loguru
+numpy
+opensmile
+pandas
+psutil
+pyannote.audio
+pyannote.core
+rich
+scikit-learn
+torch
+torchaudio<2.8.0
