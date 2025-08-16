@@ -4,15 +4,13 @@ This script orchestrates the pipeline for processing multiple camera inputs,
 stitching them together, and generating the final output.
 """
 
-from helpers import set_openmp_env
+from .helpers import set_openmp_env
 set_openmp_env()
 
 import os
 import sys
 import json
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
-import logging
+from typing import Dict, List
 from pathlib import Path
 import argparse
 from loguru import logger
@@ -20,7 +18,7 @@ from progress.state import PipelineState
 from progress.ui import Dashboard
 from progress.errors import ErrorManager
 from pyannote.audio import Pipeline
-from pyannote.core import Annotation, Segment
+from pyannote.core import Annotation
 
 # Configure logging
 logger.add("blink_multicam.log", rotation="10 MB", level="INFO")

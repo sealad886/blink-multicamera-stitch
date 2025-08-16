@@ -2,36 +2,27 @@
 """
 Helper functions for Blink multicam stitching.
 """
+import os
 
 def set_openmp_env():
     """
     Set environment variables to resolve OpenMP mutex blocking issues.
     Should be called before any imports that may trigger OpenMP.
     """
-    import os
     os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
     os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["MKL_NUM_THREADS"] = "1"
 
 
-import os, re, sys, json, math, glob, time, hashlib, shutil, argparse, subprocess, random
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional, Tuple
-from functools import partial
+# Ensure OpenMP / MKL env vars are set immediately on module import so that
+# any subsequent top-level native-library imports (torch, numpy, pyannote, ...)
+# do not trigger mutex/thread contention during import-time initialization.
+set_openmp_env()
 
-import numpy as np
-import pandas as pd
+import re, json, hashlib, subprocess
+from typing import List, Optional
 
 import torch
-from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import normalize
-from sklearn.neighbors import NearestNeighbors
-
-from faster_whisper import WhisperModel as FWModel
-from pyannote.audio import Pipeline as PyannotePipeline
-from pyannote.audio import Model as PNA_Model
-from pyannote.audio import Inference as PNA_Inference
-from pyannote.core import Segment as PNA_Segment
 
 # Optional deps (lazy)
 HAVE_HDBSCAN = False
@@ -40,48 +31,6 @@ HAVE_INASPEECH = False
 HAVE_WHISPERX = False
 HAVE_OPENSMILE = False
 HAVE_LIBROSA = False
-
-try:
-    import hdbscan as _hdbscan  # type: ignore
-    HAVE_HDBSCAN = True
-except Exception:
-    _hdbscan = None
-    pass
-
-try:
-    import speechbrain as _speechbrain  # type: ignore
-    HAVE_SPEECHBRAIN = True
-except Exception:
-    _speechbrain = None
-    pass
-
-try:
-    from inaSpeechSegmenter import Segmenter  # type: ignore
-    HAVE_INASPEECH = True
-except Exception:
-    Segmenter = None
-    pass
-
-try:
-    import whisperx  # type: ignore
-    HAVE_WHISPERX = True
-except Exception:
-    whisperx = None
-    pass
-
-try:
-    import opensmile
-    HAVE_OPENSMILE = True
-except Exception:
-    opensmile = None
-    pass
-
-try:
-    import librosa
-    HAVE_LIBROSA = True
-except Exception:
-    librosa = None
-    pass
 
 def sh(cmd: List[str], check=True) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=check)

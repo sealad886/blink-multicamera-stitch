@@ -4,13 +4,26 @@ Clustering functions for Blink multicam stitching.
 """
 
 from typing import Any, Dict, List, Optional
-import os, json, numpy as np
+import os, numpy as np
 from loguru import logger
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import normalize
 from sklearn.neighbors import NearestNeighbors
-from helpers import ensure_dir, md5, HAVE_HDBSCAN, HAVE_SPEECHBRAIN, _hdbscan, clip_to_segment_wav, sh, HAVE_LIBROSA, librosa, torch
-import os
+from .helpers import ensure_dir, HAVE_HDBSCAN, clip_to_segment_wav, sh, torch
+
+try:
+    import hdbscan
+    HAVE_HDBSCAN = True
+except ImportError:
+    hdbscan = None
+    pass
+
+try:
+    import librosa
+    HAVE_LIBROSA = True
+except ImportError:
+    librosa = None
+    pass
 
 # Limit thread usage for native libraries to reduce mutex contention
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -41,7 +54,7 @@ def run_hdbscan(Xn: np.ndarray, min_cluster_size: int) -> np.ndarray:
     if not HAVE_HDBSCAN:
         raise RuntimeError("hdbscan not installed.")
     logger.info("Creating HDBSCAN model")
-    model = _hdbscan.HDBSCAN(metric="euclidean", min_cluster_size=min_cluster_size)
+    model = hdbscan.HDBSCAN(metric="euclidean", min_cluster_size=min_cluster_size)
     logger.info("Fitting HDBSCAN model")
     result = model.fit_predict(Xn)
     logger.info("HDBSCAN fit_predict complete")

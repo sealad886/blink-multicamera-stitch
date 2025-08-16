@@ -7,18 +7,24 @@ from typing import Any, Dict, List, Optional, Tuple
 import os, re, json
 from loguru import logger
 import numpy as np
-import os
 # Limit thread usage for native libraries to reduce mutex contention
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
-from helpers import sh, get_clip_start_epoch, get_camera_id, extract_audio_16k_mono, clip_to_segment_wav, ensure_dir, md5, HAVE_INASPEECH, Segmenter
+from .helpers import get_clip_start_epoch, get_camera_id, extract_audio_16k_mono, ensure_dir, md5, HAVE_INASPEECH
 from pyannote.audio import Pipeline as PyannotePipeline
 from pyannote.audio import Inference as PNA_Inference
 from pyannote.core import Segment as PNA_Segment
 
+try:
+    from inaSpeechSegmenter import Segmenter
+    HAVE_INASPEECH = True
+except Exception:
+    Segmenter = None
+    pass
+
 def asr_transcribe_words(wav_path: str, model_size: str, use_vad=True):
     from faster_whisper import WhisperModel as FWModel
-    from helpers import device_hint
+    from .helpers import device_hint
     logger.info("Creating WhisperModel")
     model = FWModel(model_size, device=device_hint(), compute_type="auto")
     # Limit thread usage for inference
@@ -62,7 +68,7 @@ def words_to_text_in_interval(words: List[Dict[str, Any]], a: float, b: float,
         for s0,s1,label in speech_mask:
             if label == "speech" and (min(t1, s1) - max(t0, s0)) > 0:
                 ok = True
-                
+
         if not ok:
             return False
         for s0,s1,label in speech_mask:

@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+include requirements.txt
+recursive-include assets *
+recursive-include docs *
+recursive-include src/blink_stitch *.py

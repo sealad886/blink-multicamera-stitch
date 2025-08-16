@@ -36,9 +36,9 @@ Some native libraries (PyTorch, MKL, OpenMP) may cause mutex blocking or thread 
 - `OMP_NUM_THREADS=1`
 - `MKL_NUM_THREADS=1`
 
-These are set programmatically in [`helpers.py`](helpers.py:6-14) and applied automatically when running the main entry point ([`main.py`](main.py:8)). If you run scripts or modules outside the main entry, set these variables manually in your environment.
+These are set programmatically in [`src/blink_stitch/helpers.py`](src/blink_stitch/helpers.py:6-14) and applied automatically when running the main entry point ([`src/blink_stitch/main.py`](src/blink_stitch/main.py:8)). If you run modules or scripts outside the packaged entry point, set these variables manually in your environment.
 
-**Example (bash):**
+Example (bash):
 ```bash
 export KMP_DUPLICATE_LIB_OK=TRUE
 export OMP_NUM_THREADS=1
@@ -47,39 +47,46 @@ export MKL_NUM_THREADS=1
 
 For details, see [`docs/_internal/progress-system.md`](docs/_internal/progress-system.md:1).
 
-1. Create a Python virtual environment (recommended):
+1. Create a Python virtual environment (recommended) and install the package (editable):
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
+# or: pip install .
 ```
 
-1. Run preflight checks:
+2. Run the packaged preflight check or view the CLI help:
 
 ```bash
-python preflight.py
+blink-stitch --help
+# or, run the module directly:
+python -m blink_stitch.preflight
 ```
 
-1. Extract frames from a Blink export (example):
+3. Extract frames from a Blink export (example):
 
 ```bash
-python extract.py --input /path/to/export --output data/frames
+python -m blink_stitch.extract --input /path/to/export --output data/frames
 ```
 
-1. Cluster and deduplicate:
+4. Cluster and deduplicate:
 
 ```bash
-python cluster.py --frames data/frames --out data/clustered
-python dedupe.py --clusters data/clustered --out data/deduped
+python -m blink_stitch.cluster --frames data/frames --out data/clustered
+python -m blink_stitch.dedupe --clusters data/clustered --out data/deduped
 ```
 
-1. Annotate and package results:
+5. Annotate and package results:
 
 ```bash
-python annotate.py --input data/deduped --out data/annotated
-python package.py --input data/annotated --out releases/stitched
+python -m blink_stitch.annotate --input data/deduped --out data/annotated
+python -m blink_stitch.package --input data/annotated --out releases/stitched
 ```
+
+Notes:
+- The package includes repository assets and documentation in the distribution (see `MANIFEST.in` / `setup.cfg`).
+- If a module does not implement a `__main__` guard, run it via the package's console entry (`blink-stitch`) or by importing the module programmatically.
 
 Adjust CLI flags to your workflow; run each script with `-h` to view available options.
 

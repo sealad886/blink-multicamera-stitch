@@ -4,8 +4,13 @@ Annotation functions for Blink multicam stitching.
 """
 
 from typing import Any, Dict, List
-import os, json, math, numpy as np, pandas as pd
-from helpers import ensure_dir, HAVE_OPENSMILE, opensmile, HAVE_LIBROSA, librosa
+import math, numpy as np, pandas as pd
+
+try:
+    import opensmile
+    HAVE_OPENSMILE = True
+except ImportError:
+    opensmile = None
 
 def compute_paralinguistics(turns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
