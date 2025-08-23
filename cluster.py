@@ -9,8 +9,15 @@ from loguru import logger
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import normalize
 from sklearn.neighbors import NearestNeighbors
-from helpers import ensure_dir, md5, HAVE_HDBSCAN, HAVE_SPEECHBRAIN, _hdbscan, clip_to_segment_wav, sh, HAVE_LIBROSA, librosa, torch
-import os
+from helpers import ensure_dir, md5, HAVE_HDBSCAN, HAVE_SPEECHBRAIN, _hdbscan, clip_to_segment_wav, sh, HAVE_LIBROSA, librosa
+
+try:
+    import torch  # type: ignore
+except Exception:  # pragma: no cover - optional in minimal test envs
+    class _TorchStub:
+        def __getattr__(self, name):  # type: ignore
+            return lambda *a, **k: None
+    torch = _TorchStub()  # type: ignore
 
 # Limit thread usage for native libraries to reduce mutex contention
 os.environ["OMP_NUM_THREADS"] = "1"

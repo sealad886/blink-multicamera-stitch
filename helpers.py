@@ -22,16 +22,23 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-import torch
-from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import normalize
-from sklearn.neighbors import NearestNeighbors
-
-from faster_whisper import WhisperModel as FWModel
-from pyannote.audio import Pipeline as PyannotePipeline
-from pyannote.audio import Model as PNA_Model
-from pyannote.audio import Inference as PNA_Inference
-from pyannote.core import Segment as PNA_Segment
+try:
+    import torch  # type: ignore
+except Exception:  # pragma: no cover - optional on test rigs
+    class _TorchStub:
+        """Fallback torch-like object for environments without PyTorch."""
+        def __getattr__(self, name):  # type: ignore
+            return lambda *a, **k: False
+        class cuda:  # type: ignore
+            @staticmethod
+            def is_available():
+                return False
+        class backends:  # type: ignore
+            class mps:  # type: ignore
+                @staticmethod
+                def is_available():
+                    return False
+    torch = _TorchStub()  # type: ignore
 
 # Optional deps (lazy)
 HAVE_HDBSCAN = False
