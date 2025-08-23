@@ -5,10 +5,14 @@ Preflight and survey functions for Blink multicam stitching.
 
 from typing import Any, Dict, List
 import numpy as np
+from rich.console import Console
+from rich.table import Table
+from rich import box
+
 from .helpers import ffprobe_meta, get_camera_id
 
 def survey(paths: List[str], cfg: Dict[str, Any]) -> Dict[str, Any]:
-    durations = []
+    durations: list[float] = []
     cameras = set()
     sample_rates = set()
     problems = []
@@ -40,9 +44,6 @@ def survey(paths: List[str], cfg: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 def print_plan(sv: Dict[str, Any], cfg: Dict[str, Any]):
-    from rich.console import Console
-    from rich.table import Table
-    from rich import box
 
     console = Console()
     tbl = Table(title="Preflight Survey", box=box.SIMPLE_HEAVY)

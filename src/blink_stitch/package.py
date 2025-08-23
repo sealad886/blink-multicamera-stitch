@@ -5,6 +5,7 @@ Packaging functions for Blink multicam stitching.
 
 from typing import Any, Dict, List, Tuple
 import os, json, time, random
+from collections import defaultdict
 from .helpers import ensure_dir, clip_to_segment_wav
 
 def export_voicepack(turns: List[Dict[str, Any]], out_dir: str, per_speaker_clips: int = 8, clip_seconds: Tuple[float,float]=(2.5,6.0)) -> str:
@@ -13,7 +14,6 @@ def export_voicepack(turns: List[Dict[str, Any]], out_dir: str, per_speaker_clip
     and embeddings. Clips are drawn from deduped turns; diverse text prioritized.
     """
     ensure_dir(out_dir)
-    from collections import defaultdict
     by_spk: Dict[str, List[int]] = defaultdict(list)
     for i,t in enumerate(turns):
         spk = t.get("spk_global")

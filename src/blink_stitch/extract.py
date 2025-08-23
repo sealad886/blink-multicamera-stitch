@@ -7,13 +7,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import os, re, json
 from loguru import logger
 import numpy as np
-# Limit thread usage for native libraries to reduce mutex contention
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-from .helpers import get_clip_start_epoch, get_camera_id, extract_audio_16k_mono, ensure_dir, md5, HAVE_INASPEECH
-from pyannote.audio import Pipeline as PyannotePipeline
-from pyannote.audio import Inference as PNA_Inference
+from .helpers import get_clip_start_epoch, get_camera_id, extract_audio_16k_mono, ensure_dir, md5, HAVE_INASPEECH, device_hint
+from pyannote.audio import Pipeline as PyannotePipeline, Inference as PNA_Inference
 from pyannote.core import Segment as PNA_Segment
+import torch, gc
+from faster_whisper import WhisperModel as FWModel
 
 try:
     from inaSpeechSegmenter import Segmenter
@@ -23,12 +21,9 @@ except Exception:
     pass
 
 def asr_transcribe_words(wav_path: str, model_size: str, use_vad=True):
-    from faster_whisper import WhisperModel as FWModel
-    from .helpers import device_hint
     logger.info("Creating WhisperModel")
     model = FWModel(model_size, device=device_hint(), compute_type="auto")
     # Limit thread usage for inference
-    import torch
     if hasattr(torch, "set_num_threads"):
         torch.set_num_threads(1)
     if hasattr(torch, "set_num_interop_threads"):
@@ -129,14 +124,12 @@ def process_one_clip(path: str,
     embs = []
     for (s,e,_) in diar_turns:
         # Limit thread usage for embedding inference
-        import torch
         if hasattr(torch, "set_num_threads"):
             torch.set_num_threads(1)
         if hasattr(torch, "set_num_interop_threads"):
             torch.set_num_interop_threads(1)
         vec = emb_infer({"audio": wav, "segment": PNA_Segment(s,e)})
         # Explicit resource cleanup after inference
-        import gc
         gc.collect()
         embs.append(np.asarray(vec, dtype=np.float32).ravel())
 

@@ -103,3 +103,56 @@ Contributions welcome via issues and pull requests. Please include tests for new
 ## License
 
 This repository is licensed under the Apache License 2.0. See `LICENSE` for details.
+
+## Input discovery
+
+The tool now supports flexible input layouts so you can point it at a wide variety of on-disk exports:
+
+- Supported layouts
+  - Top-level directory containing month directories (e.g. `2024-01/2024-01-01/cam1/*.mp4`)
+  - Directory containing day directories
+  - Directory containing video/audio files directly
+  - Any mix of the above
+
+- Discovery behavior notes
+  - Recursive discovery (default) traverses directories using Path.rglob.
+  - Non-recursive discovery (`--no-recursive`) prefers top-level files in each input directory. If top-level media files exist those are returned. If none are present, discovery falls back to scanning immediate subdirectories (one level) and returns files found there. For mixed layouts this ensures predictable results: top-level files are preferred when present.
+  - Audio-only preference: when non-recursive discovery is used and top-level files include any standalone audio files (e.g. `.wav`, `.flac`), the runner prefers audio-only results and will return only those audio files (implementation: [`src/blink_stitch/main.py`](src/blink_stitch/main.py:217-222)).
+- Audio handling
+  - No separate audio files are required. When no standalone audio is present the pipeline will extract embedded audio from video containers as needed.
+  - The discovery step returns both video containers and audio files; later pipeline stages extract or reuse audio as appropriate.
+
+Configuration keys (YAML)
+- input_paths: string or list of strings. Example:
+  ```
+  input_paths:
+    - /data/blink_exports
+    - /mnt/camera/day-2025-01-01
+  ```
+- Note: `video_extensions` / `--extensions` values are normalized (leading dot optional, case-insensitive); they may include audio extensions and will restrict discovery to matching extensions.
+- recursive_discovery: boolean (default: true). If true, directories are searched recursively.
+- video_extensions: optional list or comma-separated string to override which extensions are considered media (e.g. `['.mp4', '.mov']`).
+
+CLI flags
+- -i / --input-path PATH   (repeatable) — add one or more input roots
+- --recursive / --no-recursive — toggle recursive discovery (default: enabled)
+- --extensions 'mp4,mov,wav' — optional comma-separated list to restrict discovery to specific extensions
+
+Examples
+- Discover recursively from a data directory:
+  ```
+  blink-stitch -i /data/blink_exports --recursive
+  ```
+- Discover a single top-level directory only (no recursion):
+  ```
+  blink-stitch -i /mnt/camera --no-recursive
+  ```
+- Restrict discovery to mp4 files:
+  ```
+  blink-stitch -i /data --extensions mp4
+  ```
+
+Notes and recommendations
+- The discovery uses pathlib.Path.rglob for recursive traversal; scanning very large filesystems may be slow. For large datasets prefer passing explicit per-month or per-day paths to limit the search scope.
+- Backward compatibility: if no `input_paths` or CLI input is provided the application will fall back to the legacy `audio_dir` behavior (glob for `.wav` / `.flac`) so existing workflows continue to work.
+- See `docs/_internal/input_discovery.md` for internal details and examples.

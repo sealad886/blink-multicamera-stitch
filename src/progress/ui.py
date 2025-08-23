@@ -4,12 +4,9 @@ This module provides components for displaying pipeline progress, system resourc
 and error information in a rich, interactive interface.
 """
 
-from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
-import time
-import psutil
 import humanize
-from rich.console import Console, RenderableType
+from rich.console import RenderableType
 from rich.panel import Panel
 from rich.table import Table
 from rich.progress import (
@@ -18,15 +15,8 @@ from rich.progress import (
     TextColumn,
     TimeRemainingColumn,
     TimeElapsedColumn,
-    SpinnerColumn
 )
-from rich.layout import Layout
-from rich.live import Live
 from rich.text import Text
-from rich.style import Style
-from rich.box import ROUNDED
-from rich.align import Align
-from rich.padding import Padding
 from progress.state import PipelineState
 
 class StageProgress:

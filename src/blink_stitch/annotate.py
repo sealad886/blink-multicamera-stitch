@@ -5,6 +5,7 @@ Annotation functions for Blink multicam stitching.
 
 from typing import Any, Dict, List
 import math, numpy as np, pandas as pd
+from collections import defaultdict
 
 try:
     import opensmile
@@ -24,7 +25,6 @@ def compute_paralinguistics(turns: List[Dict[str, Any]]) -> List[Dict[str, Any]]
         return turns
 
     # Group by clip to avoid reloading audio repeatedly
-    from collections import defaultdict
     by_clip: Dict[str,List[int]] = defaultdict(list)
     for i,t in enumerate(turns):
         by_clip[t["clip_path"]].append(i)

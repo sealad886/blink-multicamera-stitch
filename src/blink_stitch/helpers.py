@@ -20,7 +20,9 @@ def set_openmp_env():
 set_openmp_env()
 
 import re, json, hashlib, subprocess
-from typing import List, Optional
+import logging
+from pathlib import Path
+from typing import List, Optional, Iterable
 
 import torch
 
@@ -105,3 +107,103 @@ def extract_audio_16k_mono(in_mp4: str, out_wav: str):
 def clip_to_segment_wav(src_mp4: str, start: float, end: float, out_wav: str):
     dur = max(0.05, end - start)
     sh(["ffmpeg", "-y", "-ss", f"{start:.3f}", "-t", f"{dur:.3f}", "-i", src_mp4, "-ac", "1", "-ar", "16000", "-vn", out_wav])
+
+# Media discovery helpers
+# Small, deterministic helpers to locate media files (video/audio) in mixed layouts.
+# Kept minimal and conservative; returns absolute (resolved) paths to match common usage.
+VIDEO_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".mpg", ".mpeg", ".ts"}
+AUDIO_EXTS = {".wav", ".mp3", ".aac", ".m4a", ".flac", ".ogg"}
+
+def normalize_ext(path_or_name: str) -> str:
+    """
+    Return the lowercased extension (including the leading dot) for a filename or path.
+    Examples: "FOO.MP4" -> ".mp4", "audio.wav" -> ".wav", "noext" -> ""
+    """
+    return Path(path_or_name).suffix.lower()
+
+def discover_media_paths(paths: List[str], recursive: bool = True, exts: Optional[Iterable[str]] = None) -> List[str]:
+    """
+    Discover media file paths from a list of files or directories.
+
+    - paths: iterable of file or directory paths (strings).
+    - recursive: if True, directories are traversed recursively (Path.rglob); otherwise only top-level (Path.glob).
+    - exts: optional iterable of extensions (with or without a leading dot); case-insensitive.
+            If not provided, defaults to VIDEO_EXTS | AUDIO_EXTS.
+
+    Returns:
+        A deterministic, sorted list of absolute paths (as strings). Non-existing paths are skipped
+        and logged at debug level.
+    """
+    logger = logging.getLogger(__name__)
+    # prepare chosen extension set (normalize to leading-dot, lowercase)
+    # Note: exts coming from CLI/config may include values like "mp4" or ".MP4".
+    # Normalize here to a set of lower-case extensions with a leading dot so
+    # callers may pass either form. This mirrors behavior expected by tests.
+    if exts is None:
+        chosen = set(VIDEO_EXTS) | set(AUDIO_EXTS)
+    else:
+        chosen = set()
+        for e in exts:
+            ee = e.lower()
+            if not ee.startswith("."):
+                ee = "." + ee
+            chosen.add(ee)
+
+    results = set()
+    for p in paths:
+        pth = Path(p)
+        if not pth.exists():
+            logger.debug("discover_media_paths: skipping non-existing path: %s", p)
+            continue
+        if pth.is_file():
+            if normalize_ext(pth.name) in chosen:
+                results.add(str(pth.resolve()))
+            continue
+        if pth.is_dir():
+            if recursive:
+                # Recursive traversal: walk all descendants but skip hidden files/dirs and symbolic links
+                iterator = pth.rglob("*")
+                for child in iterator:
+                    try:
+                        # skip symlinks to avoid loops and hidden files/dirs (any path component starting with '.')
+                        if child.is_symlink():
+                            continue
+                        if any(part.startswith(".") for part in child.parts):
+                            continue
+                    except Exception:
+                        # best-effort: if parts inspection fails, skip the entry
+                        continue
+                    if child.is_file() and normalize_ext(child.name) in chosen:
+                        results.add(str(child.resolve()))
+            else:
+                # Non-recursive discovery semantics (conservative) — per-input behaviour:
+                # - collect top-level media files for this input directory (skip hidden and symlinks)
+                # - if any top-level media found, prefer top-level files only
+                #   and, if any top-level audio (.wav/.flac) present, prefer audio-only
+                # - if no top-level media found, fall back to scanning immediate subdirectories
+                top_files = []
+                for child in pth.glob("*"):
+                    if child.name.startswith(".") or child.is_symlink():
+                        continue
+                    if child.is_file() and normalize_ext(child.name) in chosen:
+                        top_files.append(child)
+                if top_files:
+                    # If any top-level audio exists prefer audio-only results for shallow scans
+                    audio_exts = {".wav", ".flac"}
+                    top_audio = [f for f in top_files if normalize_ext(f.name) in audio_exts]
+                    selected = top_audio if top_audio else top_files
+                    for f in selected:
+                        results.add(str(f.resolve()))
+                else:
+                    # Fallback: look in immediate subdirectories (one-level deep), applying same hidden/symlink rules
+                    for child in pth.iterdir():
+                        if child.is_symlink() or child.name.startswith("."):
+                            continue
+                        if child.is_dir():
+                            for sub in child.glob("*"):
+                                if sub.name.startswith(".") or sub.is_symlink():
+                                    continue
+                                if sub.is_file() and normalize_ext(sub.name) in chosen:
+                                    results.add(str(sub.resolve()))
+
+    return sorted(results)

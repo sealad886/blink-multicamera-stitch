@@ -1,0 +1,44 @@
+# Primary output and discovery
+output_dir: output                  # (string) directory where generated JSON outputs are written
+audio_dir: audio_samples            # (string) legacy single-audio-directory fallback (glob .wav/.flac)
+
+# Model / diarization
+model_path: pyannote/speaker-diarization-3.1  # (string) pyannote pretrained model identifier
+
+# Camera & timestamp extraction
+# how to obtain camera id for each clip: one of: parentdir, filename, regex
+camera_from: parentdir
+# regex used for filename-based camera/ts parsing. Must use named groups 'camera' and/or 'ts' if used
+filename_regex: '^(?P<hour>\d{2})-(?P<minute>\d{2})-(?P<second>\d{2})_(?P<camera>[A-Za-z][A-Za-z0-9]*?)(?P<device>G[A-Za-z0-9]+)_(?P<seq>\d{3})\.mp4$'
+# strptime format used to parse the 'ts' group from filename_regex
+ts_format: '%Y%m%dT%H%M%S'
+# time_source used when computing clip absolute times (used by helpers.get_clip_start_epoch)
+# supported values: filename, ffprobe, mtime
+time_source: filename
+
+# Runtime / parallelism
+workers: 1                         # (int) number of workers (preflight may alter behaviour)
+
+# Clustering / verification
+cluster_mode: dbscan               # (string) clustering backend: 'dbscan' (default) or 'hdbscan'
+verify: none                       # (string) verification mode; e.g. 'ecapa' to enable SpeechBrain ECAPA verification
+
+# Optional filters / features (boolean flags)
+filter_music_tv: false             # (bool) enable inaSpeechSegmenter music/TV filtering (requires inaSpeechSegmenter)
+whisperx: false                    # (bool) enable WhisperX word-level alignment (requires whisperx)
+
+# ASR and diarization tuning
+asr_model: small                   # (string) model identifier for Faster-Whisper (e.g. tiny, base, small, medium, large)
+min_turn_dur: 0.25                 # (float) minimum duration (seconds) for diarization turns to be kept
+
+# Discovery and CLI-mapped options
+# input_paths: optional list or string of paths (files or directories) - can be set by CLI (-i) or here
+recursive_discovery: true          # (bool) whether discover_media_paths should recurse into subdirectories
+# video_extensions: optional list or comma-separated string to limit discovery (e.g. mp4, wav)
+video_extensions: ['mp4','mov','wav']
+# Example: input_paths: ['/path/to/topdir']
+input_paths: ['.']
+
+# Notes:
+# - Authentication for pyannote is read from the environment variable HF_TOKEN (preferred).
+# - Logging in the current codebase writes to 'blink_multicam.log' by default (not read from config).

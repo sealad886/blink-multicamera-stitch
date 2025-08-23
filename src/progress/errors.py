@@ -240,28 +240,62 @@ class TemporaryFailureHandler(BaseErrorHandler):
         if "retry_after" in (error.details or {}):
             retry_after = error.details["retry_after"] if error.details else None
             current_time = datetime.now().timestamp()
-
+ 
             if retry_after and current_time < retry_after:
                 # Wait until the retry time
                 wait_time = max(0, retry_after - current_time)
                 logger.info(f"Waiting {wait_time:.1f} seconds before retrying stage {error.stage}")
                 time.sleep(wait_time)
-
-                # Simulate successful retry
-                # TODO: Implement successful retry logic
+ 
+                # If the caller provided a post-retry check callable in error.details, call it to decide success.
+                post_check = None
+                if error.details and isinstance(error.details, dict):
+                    post_check = error.details.get("post_retry_check")
+ 
+                if callable(post_check):
+                    try:
+                        return bool(post_check())
+                    except Exception as e:
+                        logger.error(f"post_retry_check failed for stage {error.stage}: {e}")
+                        return False
+                # Default: indicate that the manager should treat this as a scheduled retry (handled)
                 return True
 
-        # Implement exponential backoff for retries
-        max_retries = 3     # TODO: Make this a configuration
-        base_delay = 2  # seconds   # TODO: Make this a configuration
-
-        if error.retry_count < max_retries:
-            delay = base_delay * (2 ** error.retry_count)
-            logger.info(f"Retrying stage {error.stage} in {delay} seconds (attempt {error.retry_count + 1}/{max_retries})")
+        # Exponential backoff for retries. Allow overrides via error.details.
+        DEFAULT_MAX_RETRIES = 3
+        DEFAULT_BASE_DELAY = 2.0  # seconds
+ 
+        max_retries = DEFAULT_MAX_RETRIES
+        base_delay = DEFAULT_BASE_DELAY
+        if error.details and isinstance(error.details, dict):
+            try:
+                max_retries = int(error.details.get("max_retries", max_retries))
+            except Exception:
+                pass
+            try:
+                base_delay = float(error.details.get("base_delay", base_delay))
+            except Exception:
+                pass
+ 
+        # Only attempt a delayed retry if we haven't exhausted retry attempts
+        if error.retry_count <= max_retries:
+            # compute delay using (retry_count - 1) so first retry is base_delay
+            delay = base_delay * (2 ** max(0, error.retry_count - 1))
+            logger.info(f"Retrying stage {error.stage} in {delay} seconds (attempt {error.retry_count}/{max_retries})")
             time.sleep(delay)
-
-            # Simulate successful retry
-            # TODO: Implement successful retry logic
+ 
+            # If a post-retry check callable is provided, use it to determine success.
+            post_check = None
+            if error.details and isinstance(error.details, dict):
+                post_check = error.details.get("post_retry_check")
+ 
+            if callable(post_check):
+                try:
+                    return bool(post_check())
+                except Exception as e:
+                    logger.error(f"post_retry_check failed for stage {error.stage}: {e}")
+                    return False
+            # Default to signalling that a retry was scheduled/attempted.
             return True
 
         return False

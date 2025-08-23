@@ -9,7 +9,6 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime
-import logging
 from loguru import logger
 
 # Configure logging

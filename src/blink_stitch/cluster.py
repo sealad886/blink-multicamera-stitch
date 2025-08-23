@@ -5,11 +5,15 @@ Clustering functions for Blink multicam stitching.
 
 from typing import Any, Dict, List, Optional
 import os, numpy as np
+import gc
 from loguru import logger
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import normalize
 from sklearn.neighbors import NearestNeighbors
 from .helpers import ensure_dir, HAVE_HDBSCAN, clip_to_segment_wav, sh, torch
+import soundfile as sf
+from collections import defaultdict
+from speechbrain.inference.classifiers import EncoderClassifier
 
 try:
     import hdbscan
@@ -66,10 +70,8 @@ def external_verifier_score(cmd_tmpl: str, wav1: str, wav2: str) -> float:
     return float(p.stdout.strip().split()[0])
 
 def ecapa_embed_and_score(wav_a: str, wav_b: str) -> float:
-    from speechbrain.inference.classifiers import EncoderClassifier  # lazy
     logger.info("Loading EncoderClassifier")
     classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
-    import soundfile as sf
     logger.info("Reading wav_a and wav_b with soundfile")
     wa, fsa = sf.read(wav_a); wb, fsb = sf.read(wav_b)
     def prep(w, fs):
@@ -97,7 +99,6 @@ def ecapa_embed_and_score(wav_a: str, wav_b: str) -> float:
     # Compute similarity score with minimal thread contention
     score = float(torch.sum(ea * eb).item())
     # Explicit resource cleanup
-    import gc
     gc.collect()
     return score
 
@@ -108,7 +109,6 @@ def refine_by_verification(turns: List[Dict[str, Any]],
                            score_threshold: float,
                            max_pairs: int,
                            external_cmd: Optional[str]) -> np.ndarray:
-    from collections import defaultdict
     clusters = defaultdict(list)
     for i, lab in enumerate(labels):
         if lab == -1: continue
